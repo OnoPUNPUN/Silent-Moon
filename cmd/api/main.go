@@ -18,6 +18,7 @@ import (
 	devicehandler "github.com/silentmoon/api/internal/handler/device"
 	progressohandler "github.com/silentmoon/api/internal/handler/progress"
 	storagehandler "github.com/silentmoon/api/internal/handler/storage"
+	synchandler "github.com/silentmoon/api/internal/handler/sync"
 	taghandler "github.com/silentmoon/api/internal/handler/tag"
 	"github.com/silentmoon/api/internal/middleware"
 	"github.com/silentmoon/api/internal/platform/database"
@@ -34,6 +35,7 @@ import (
 	deviceservice "github.com/silentmoon/api/internal/service/device"
 	progressservice "github.com/silentmoon/api/internal/service/progress"
 	storageservice "github.com/silentmoon/api/internal/service/storage"
+	syncservice "github.com/silentmoon/api/internal/service/sync"
 	tagservice "github.com/silentmoon/api/internal/service/tag"
 	"github.com/silentmoon/api/internal/storage"
 	"github.com/silentmoon/api/internal/storage/r2"
@@ -135,6 +137,7 @@ func main() {
 			annRepo := postgresrepo.NewAnnotationRepository(queries)
 			bmRepo := postgresrepo.NewBookmarkRepository(queries)
 			progRepo := postgresrepo.NewReadingProgressRepository(queries)
+			syncRepo := postgresrepo.NewSyncRepository(queries)
 
 			// Services
 			authSvc := authservice.NewService(userRepo, deviceRepo, tokenRepo, tokenManager)
@@ -146,6 +149,7 @@ func main() {
 			bmSvc := bmservice.NewService(bmRepo, bookRepo)
 			progSvc := progressservice.NewService(progRepo, bookRepo)
 			storageSvc := storageservice.NewService(storageClient, bookRepo)
+			syncSvc := syncservice.NewService(syncRepo, deviceRepo, annRepo, bmRepo, progRepo, bookRepo, collRepo)
 
 			// Handlers
 			authHdl := authhandler.NewHandler(authSvc)
@@ -157,6 +161,7 @@ func main() {
 			bmHdl := bmhandler.NewHandler(bmSvc)
 			progHdl := progressohandler.NewHandler(progSvc)
 			storageHdl := storagehandler.NewHandler(storageSvc)
+			syncHdl := synchandler.NewHandler(syncSvc)
 
 			// Public authentication routes
 			api.Route("/auth", func(auth chi.Router) {
@@ -244,6 +249,13 @@ func main() {
 					tg.Get("/", tagHdl.List)
 					tg.Post("/", tagHdl.Create)
 					tg.Delete("/{id}", tagHdl.Delete)
+				})
+
+				// Synchronization
+				protected.Route("/sync", func(sync chi.Router) {
+					sync.Post("/push", syncHdl.Push)
+					sync.Get("/changes", syncHdl.Pull)
+					sync.Get("/status", syncHdl.Status)
 				})
 			})
 		}

@@ -19,6 +19,7 @@ type Querier interface {
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateDevice(ctx context.Context, arg CreateDeviceParams) (Device, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateSyncChange(ctx context.Context, arg CreateSyncChangeParams) (SyncChange, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteTag(ctx context.Context, arg DeleteTagParams) error
@@ -28,8 +29,10 @@ type Querier interface {
 	GetCollectionByID(ctx context.Context, arg GetCollectionByIDParams) (Collection, error)
 	GetDeviceByID(ctx context.Context, arg GetDeviceByIDParams) (Device, error)
 	GetLatestReadingProgressForBook(ctx context.Context, arg GetLatestReadingProgressForBookParams) (ReadingProgress, error)
+	GetLatestSyncSequenceForUser(ctx context.Context, userID pgtype.UUID) (int64, error)
 	GetReadingProgressByDevice(ctx context.Context, arg GetReadingProgressByDeviceParams) (ReadingProgress, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetSyncOperationByID(ctx context.Context, arg GetSyncOperationByIDParams) (SyncOperation, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	ListAnnotationsByBookID(ctx context.Context, arg ListAnnotationsByBookIDParams) ([]Annotation, error)
@@ -39,8 +42,10 @@ type Querier interface {
 	ListCollectionsByUserID(ctx context.Context, userID pgtype.UUID) ([]Collection, error)
 	ListDevicesByUserID(ctx context.Context, userID pgtype.UUID) ([]Device, error)
 	ListReadingProgressForBook(ctx context.Context, arg ListReadingProgressForBookParams) ([]ReadingProgress, error)
+	ListSyncChangesAfterCursor(ctx context.Context, arg ListSyncChangesAfterCursorParams) ([]SyncChange, error)
 	ListTagsByUserID(ctx context.Context, userID pgtype.UUID) ([]Tag, error)
 	ListTagsForBook(ctx context.Context, arg ListTagsForBookParams) ([]Tag, error)
+	RecordSyncOperation(ctx context.Context, arg RecordSyncOperationParams) (SyncOperation, error)
 	RemoveBookFromCollection(ctx context.Context, arg RemoveBookFromCollectionParams) error
 	RemoveTagFromBook(ctx context.Context, arg RemoveTagFromBookParams) error
 	RevokeAllDeviceTokens(ctx context.Context, arg RevokeAllDeviceTokensParams) error

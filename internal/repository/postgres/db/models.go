@@ -116,6 +116,16 @@ type SyncChange struct {
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
+type SyncOperation struct {
+	OperationID pgtype.UUID        `json:"operation_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	DeviceID    pgtype.UUID        `json:"device_id"`
+	EntityType  string             `json:"entity_type"`
+	EntityID    pgtype.UUID        `json:"entity_id"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type Tag struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
