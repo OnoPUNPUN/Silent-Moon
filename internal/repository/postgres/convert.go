@@ -47,3 +47,32 @@ func FromPGText(t pgtype.Text) *string {
 	val := t.String
 	return &val
 }
+
+func ToPGNullableUUID(u *uuid.UUID) pgtype.UUID {
+	if u == nil || *u == uuid.Nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{Bytes: *u, Valid: true}
+}
+
+func FromPGNullableUUID(p pgtype.UUID) *uuid.UUID {
+	if !p.Valid {
+		return nil
+	}
+	u := uuid.UUID(p.Bytes)
+	return &u
+}
+
+func FromPGNumeric(n pgtype.Numeric) float64 {
+	f, _ := n.Float64Value()
+	if !f.Valid {
+		return 0.0
+	}
+	return f.Float64
+}
+
+func ToPGNumeric(f float64) pgtype.Numeric {
+	var n pgtype.Numeric
+	_ = n.Scan(f)
+	return n
+}

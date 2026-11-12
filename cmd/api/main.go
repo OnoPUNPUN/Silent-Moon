@@ -10,10 +10,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/silentmoon/api/internal/config"
 	"github.com/silentmoon/api/internal/handler"
+	annhandler "github.com/silentmoon/api/internal/handler/annotation"
 	authhandler "github.com/silentmoon/api/internal/handler/auth"
+	bmhandler "github.com/silentmoon/api/internal/handler/bookmark"
 	bookhandler "github.com/silentmoon/api/internal/handler/book"
 	collectionhandler "github.com/silentmoon/api/internal/handler/collection"
 	devicehandler "github.com/silentmoon/api/internal/handler/device"
+	progressohandler "github.com/silentmoon/api/internal/handler/progress"
 	taghandler "github.com/silentmoon/api/internal/handler/tag"
 	"github.com/silentmoon/api/internal/middleware"
 	"github.com/silentmoon/api/internal/platform/database"
@@ -22,10 +25,13 @@ import (
 	"github.com/silentmoon/api/internal/platform/server"
 	postgresrepo "github.com/silentmoon/api/internal/repository/postgres"
 	sqlcdb "github.com/silentmoon/api/internal/repository/postgres/db"
+	annservice "github.com/silentmoon/api/internal/service/annotation"
 	authservice "github.com/silentmoon/api/internal/service/auth"
+	bmservice "github.com/silentmoon/api/internal/service/bookmark"
 	bookservice "github.com/silentmoon/api/internal/service/book"
 	collectionservice "github.com/silentmoon/api/internal/service/collection"
 	deviceservice "github.com/silentmoon/api/internal/service/device"
+	progressservice "github.com/silentmoon/api/internal/service/progress"
 	tagservice "github.com/silentmoon/api/internal/service/tag"
 	"github.com/silentmoon/api/migrations"
 )
@@ -100,6 +106,9 @@ func main() {
 			bookRepo := postgresrepo.NewBookRepository(queries)
 			collRepo := postgresrepo.NewCollectionRepository(queries)
 			tagRepo := postgresrepo.NewTagRepository(queries)
+			annRepo := postgresrepo.NewAnnotationRepository(queries)
+			bmRepo := postgresrepo.NewBookmarkRepository(queries)
+			progRepo := postgresrepo.NewReadingProgressRepository(queries)
 
 			// Services
 			authSvc := authservice.NewService(userRepo, deviceRepo, tokenRepo, tokenManager)
@@ -107,6 +116,9 @@ func main() {
 			bookSvc := bookservice.NewService(bookRepo)
 			collSvc := collectionservice.NewService(collRepo, bookRepo)
 			tagSvc := tagservice.NewService(tagRepo, bookRepo)
+			annSvc := annservice.NewService(annRepo, bookRepo)
+			bmSvc := bmservice.NewService(bmRepo, bookRepo)
+			progSvc := progressservice.NewService(progRepo, bookRepo)
 
 			// Handlers
 			authHdl := authhandler.NewHandler(authSvc)
@@ -114,6 +126,9 @@ func main() {
 			bookHdl := bookhandler.NewHandler(bookSvc)
 			collHdl := collectionhandler.NewHandler(collSvc)
 			tagHdl := taghandler.NewHandler(tagSvc)
+			annHdl := annhandler.NewHandler(annSvc)
+			bmHdl := bmhandler.NewHandler(bmSvc)
+			progHdl := progressohandler.NewHandler(progSvc)
 
 			// Public authentication routes
 			api.Route("/auth", func(auth chi.Router) {
@@ -149,10 +164,32 @@ func main() {
 					bk.Patch("/{id}", bookHdl.Update)
 					bk.Delete("/{id}", bookHdl.Delete)
 
+					// Book Annotations & Bookmarks & Progress
+					bk.Get("/{id}/annotations", annHdl.ListByBook)
+					bk.Get("/{id}/bookmarks", bmHdl.ListByBook)
+					bk.Get("/{id}/progress", progHdl.Get)
+					bk.Put("/{id}/progress", progHdl.Update)
+
 					// Book Tags
 					bk.Get("/{id}/tags", tagHdl.ListTagsForBook)
 					bk.Post("/{id}/tags/{tagId}", tagHdl.AddTagToBook)
 					bk.Delete("/{id}/tags/{tagId}", tagHdl.RemoveTagFromBook)
+				})
+
+				// Annotations
+				protected.Route("/annotations", func(ann chi.Router) {
+					ann.Post("/", annHdl.Create)
+					ann.Get("/{id}", annHdl.Get)
+					ann.Patch("/{id}", annHdl.Update)
+					ann.Delete("/{id}", annHdl.Delete)
+				})
+
+				// Bookmarks
+				protected.Route("/bookmarks", func(bm chi.Router) {
+					bm.Post("/", bmHdl.Create)
+					bm.Get("/{id}", bmHdl.Get)
+					bm.Patch("/{id}", bmHdl.Update)
+					bm.Delete("/{id}", bmHdl.Delete)
 				})
 
 				// Collections

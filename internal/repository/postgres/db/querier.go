@@ -13,23 +13,32 @@ import (
 type Querier interface {
 	AddBookToCollection(ctx context.Context, arg AddBookToCollectionParams) error
 	AddTagToBook(ctx context.Context, arg AddTagToBookParams) error
+	CreateAnnotation(ctx context.Context, arg CreateAnnotationParams) (Annotation, error)
 	CreateBook(ctx context.Context, arg CreateBookParams) (Book, error)
+	CreateBookmark(ctx context.Context, arg CreateBookmarkParams) (Bookmark, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateDevice(ctx context.Context, arg CreateDeviceParams) (Device, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteTag(ctx context.Context, arg DeleteTagParams) error
+	GetAnnotationByID(ctx context.Context, arg GetAnnotationByIDParams) (Annotation, error)
 	GetBookByID(ctx context.Context, arg GetBookByIDParams) (Book, error)
+	GetBookmarkByID(ctx context.Context, arg GetBookmarkByIDParams) (Bookmark, error)
 	GetCollectionByID(ctx context.Context, arg GetCollectionByIDParams) (Collection, error)
 	GetDeviceByID(ctx context.Context, arg GetDeviceByIDParams) (Device, error)
+	GetLatestReadingProgressForBook(ctx context.Context, arg GetLatestReadingProgressForBookParams) (ReadingProgress, error)
+	GetReadingProgressByDevice(ctx context.Context, arg GetReadingProgressByDeviceParams) (ReadingProgress, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	ListAnnotationsByBookID(ctx context.Context, arg ListAnnotationsByBookIDParams) ([]Annotation, error)
+	ListBookmarksByBookID(ctx context.Context, arg ListBookmarksByBookIDParams) ([]Bookmark, error)
 	ListBooksByUserID(ctx context.Context, userID pgtype.UUID) ([]Book, error)
 	ListBooksInCollection(ctx context.Context, arg ListBooksInCollectionParams) ([]Book, error)
 	ListCollectionsByUserID(ctx context.Context, userID pgtype.UUID) ([]Collection, error)
 	ListDevicesByUserID(ctx context.Context, userID pgtype.UUID) ([]Device, error)
+	ListReadingProgressForBook(ctx context.Context, arg ListReadingProgressForBookParams) ([]ReadingProgress, error)
 	ListTagsByUserID(ctx context.Context, userID pgtype.UUID) ([]Tag, error)
 	ListTagsForBook(ctx context.Context, arg ListTagsForBookParams) ([]Tag, error)
 	RemoveBookFromCollection(ctx context.Context, arg RemoveBookFromCollectionParams) error
@@ -37,15 +46,20 @@ type Querier interface {
 	RevokeAllDeviceTokens(ctx context.Context, arg RevokeAllDeviceTokensParams) error
 	RevokeDevice(ctx context.Context, arg RevokeDeviceParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	SoftDeleteAnnotation(ctx context.Context, arg SoftDeleteAnnotationParams) error
 	SoftDeleteBook(ctx context.Context, arg SoftDeleteBookParams) error
+	SoftDeleteBookmark(ctx context.Context, arg SoftDeleteBookmarkParams) error
 	SoftDeleteCollection(ctx context.Context, arg SoftDeleteCollectionParams) error
+	UpdateAnnotation(ctx context.Context, arg UpdateAnnotationParams) (Annotation, error)
 	UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, error)
 	UpdateBookStatus(ctx context.Context, arg UpdateBookStatusParams) (Book, error)
+	UpdateBookmark(ctx context.Context, arg UpdateBookmarkParams) (Bookmark, error)
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
 	UpdateDevice(ctx context.Context, arg UpdateDeviceParams) (Device, error)
 	UpdateDeviceSyncTime(ctx context.Context, arg UpdateDeviceSyncTimeParams) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
+	UpsertReadingProgress(ctx context.Context, arg UpsertReadingProgressParams) (ReadingProgress, error)
 }
 
 var _ Querier = (*Queries)(nil)
