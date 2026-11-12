@@ -17,6 +17,7 @@ import (
 	collectionhandler "github.com/silentmoon/api/internal/handler/collection"
 	devicehandler "github.com/silentmoon/api/internal/handler/device"
 	progressohandler "github.com/silentmoon/api/internal/handler/progress"
+	storagehandler "github.com/silentmoon/api/internal/handler/storage"
 	taghandler "github.com/silentmoon/api/internal/handler/tag"
 	"github.com/silentmoon/api/internal/middleware"
 	"github.com/silentmoon/api/internal/platform/database"
@@ -32,7 +33,10 @@ import (
 	collectionservice "github.com/silentmoon/api/internal/service/collection"
 	deviceservice "github.com/silentmoon/api/internal/service/device"
 	progressservice "github.com/silentmoon/api/internal/service/progress"
+	storageservice "github.com/silentmoon/api/internal/service/storage"
 	tagservice "github.com/silentmoon/api/internal/service/tag"
+	"github.com/silentmoon/api/internal/storage"
+	"github.com/silentmoon/api/internal/storage/r2"
 	"github.com/silentmoon/api/migrations"
 )
 
@@ -78,6 +82,28 @@ func main() {
 		return
 	}
 
+	// Storage client initialization
+	var storageClient storage.Client
+	if cfg.R2AccessKeyID != "" && cfg.R2SecretKey != "" {
+		r2Cli, err := r2.New(r2.Config{
+			AccountID: cfg.R2AccountID,
+			AccessKey: cfg.R2AccessKeyID,
+			SecretKey: cfg.R2SecretKey,
+			Bucket:    cfg.R2BucketName,
+			Endpoint:  cfg.R2Endpoint,
+		})
+		if err != nil {
+			appLogger.Warn("failed to initialize R2 storage client; using noop fallback", slog.String("error", err.Error()))
+			storageClient = storage.NewNoopClient()
+		} else {
+			appLogger.Info("Cloudflare R2 storage client configured successfully", slog.String("bucket", cfg.R2BucketName))
+			storageClient = r2Cli
+		}
+	} else {
+		appLogger.Info("R2 credentials not provided; using noop storage fallback")
+		storageClient = storage.NewNoopClient()
+	}
+
 	// Security & Token Manager
 	tokenManager := security.NewTokenManager(
 		cfg.JWTAccessSecret,
@@ -119,6 +145,7 @@ func main() {
 			annSvc := annservice.NewService(annRepo, bookRepo)
 			bmSvc := bmservice.NewService(bmRepo, bookRepo)
 			progSvc := progressservice.NewService(progRepo, bookRepo)
+			storageSvc := storageservice.NewService(storageClient, bookRepo)
 
 			// Handlers
 			authHdl := authhandler.NewHandler(authSvc)
@@ -129,6 +156,7 @@ func main() {
 			annHdl := annhandler.NewHandler(annSvc)
 			bmHdl := bmhandler.NewHandler(bmSvc)
 			progHdl := progressohandler.NewHandler(progSvc)
+			storageHdl := storagehandler.NewHandler(storageSvc)
 
 			// Public authentication routes
 			api.Route("/auth", func(auth chi.Router) {
@@ -163,6 +191,11 @@ func main() {
 					bk.Get("/{id}", bookHdl.Get)
 					bk.Patch("/{id}", bookHdl.Update)
 					bk.Delete("/{id}", bookHdl.Delete)
+
+					// Book Storage (Presigned upload/download)
+					bk.Post("/{id}/upload-url", storageHdl.GetUploadURL)
+					bk.Post("/{id}/upload-complete", storageHdl.ConfirmUpload)
+					bk.Get("/{id}/download-url", storageHdl.GetDownloadURL)
 
 					// Book Annotations & Bookmarks & Progress
 					bk.Get("/{id}/annotations", annHdl.ListByBook)
