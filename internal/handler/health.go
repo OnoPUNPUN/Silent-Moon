@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/silentmoon/api/internal/platform/database"
 	"github.com/silentmoon/api/internal/platform/response"
 )
@@ -15,6 +16,10 @@ type HealthHandler struct {
 
 func NewHealthHandler(db *database.DB) *HealthHandler {
 	return &HealthHandler{db: db}
+}
+
+func (h *HealthHandler) RegisterRoutes(r chi.Router) {
+	r.Get("/health", h.Check)
 }
 
 type HealthResponse struct {
