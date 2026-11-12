@@ -11,9 +11,19 @@ import (
 )
 
 type Querier interface {
+	CreateDevice(ctx context.Context, arg CreateDeviceParams) (Device, error)
+	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	GetDeviceByID(ctx context.Context, arg GetDeviceByIDParams) (Device, error)
+	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	ListDevicesByUserID(ctx context.Context, userID pgtype.UUID) ([]Device, error)
+	RevokeAllDeviceTokens(ctx context.Context, arg RevokeAllDeviceTokensParams) error
+	RevokeDevice(ctx context.Context, arg RevokeDeviceParams) error
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	UpdateDevice(ctx context.Context, arg UpdateDeviceParams) (Device, error)
+	UpdateDeviceSyncTime(ctx context.Context, arg UpdateDeviceSyncTimeParams) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 }

@@ -10,9 +10,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/silentmoon/api/internal/config"
 	"github.com/silentmoon/api/internal/handler"
+	authhandler "github.com/silentmoon/api/internal/handler/auth"
+	devicehandler "github.com/silentmoon/api/internal/handler/device"
+	"github.com/silentmoon/api/internal/middleware"
 	"github.com/silentmoon/api/internal/platform/database"
 	"github.com/silentmoon/api/internal/platform/logger"
+	"github.com/silentmoon/api/internal/platform/security"
 	"github.com/silentmoon/api/internal/platform/server"
+	postgresrepo "github.com/silentmoon/api/internal/repository/postgres"
+	sqlcdb "github.com/silentmoon/api/internal/repository/postgres/db"
+	authservice "github.com/silentmoon/api/internal/service/auth"
+	deviceservice "github.com/silentmoon/api/internal/service/device"
 	"github.com/silentmoon/api/migrations"
 )
 
@@ -32,17 +40,17 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var db *database.DB
+	var dbConn *database.DB
 	var err error
 
-	db, err = database.Connect(ctx, cfg.DatabaseURL)
+	dbConn, err = database.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		appLogger.Warn("database connection could not be established; starting with degraded state",
 			slog.String("error", err.Error()),
 		)
 	} else {
 		appLogger.Info("database connection established successfully")
-		defer db.Close()
+		defer dbConn.Close()
 
 		// Run migrations if connected
 		if err := database.RunMigrations(migrations.FS, ".", cfg.DatabaseURL); err != nil {
@@ -58,16 +66,59 @@ func main() {
 		return
 	}
 
+	// Security & Token Manager
+	tokenManager := security.NewTokenManager(
+		cfg.JWTAccessSecret,
+		cfg.JWTAccessTTL,
+		cfg.JWTRefreshTTL,
+	)
+
 	srv := server.New(cfg, appLogger)
 	r := srv.Router()
 
 	// Health check handlers
-	healthHandler := handler.NewHealthHandler(db)
+	healthHandler := handler.NewHealthHandler(dbConn)
 	r.Get("/health", healthHandler.Check)
 
 	// API v1 group
 	r.Route("/api/v1", func(api chi.Router) {
 		api.Get("/health", healthHandler.Check)
+
+		if dbConn != nil {
+			queries := sqlcdb.New(dbConn.Pool)
+			userRepo := postgresrepo.NewUserRepository(queries)
+			deviceRepo := postgresrepo.NewDeviceRepository(queries)
+			tokenRepo := postgresrepo.NewRefreshTokenRepository(queries)
+
+			authSvc := authservice.NewService(userRepo, deviceRepo, tokenRepo, tokenManager)
+			deviceSvc := deviceservice.NewService(deviceRepo, tokenRepo)
+
+			authHdl := authhandler.NewHandler(authSvc)
+			deviceHdl := devicehandler.NewHandler(deviceSvc)
+
+			// Public authentication routes
+			api.Route("/auth", func(auth chi.Router) {
+				auth.Post("/register", authHdl.Register)
+				auth.Post("/login", authHdl.Login)
+				auth.Post("/refresh", authHdl.Refresh)
+				auth.Post("/logout", authHdl.Logout)
+
+				// Protected auth routes
+				auth.Group(func(protected chi.Router) {
+					protected.Use(middleware.Authenticate(tokenManager))
+					protected.Get("/me", authHdl.Me)
+				})
+			})
+
+			// Protected device routes
+			api.Route("/devices", func(dev chi.Router) {
+				dev.Use(middleware.Authenticate(tokenManager))
+				dev.Get("/", deviceHdl.List)
+				dev.Post("/", deviceHdl.Register)
+				dev.Patch("/{id}", deviceHdl.Update)
+				dev.Delete("/{id}", deviceHdl.Revoke)
+			})
+		}
 	})
 
 	if err := srv.Start(); err != nil {
