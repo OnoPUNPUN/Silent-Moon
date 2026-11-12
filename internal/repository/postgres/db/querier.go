@@ -11,17 +11,37 @@ import (
 )
 
 type Querier interface {
+	AddBookToCollection(ctx context.Context, arg AddBookToCollectionParams) error
+	AddTagToBook(ctx context.Context, arg AddTagToBookParams) error
+	CreateBook(ctx context.Context, arg CreateBookParams) (Book, error)
+	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateDevice(ctx context.Context, arg CreateDeviceParams) (Device, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteTag(ctx context.Context, arg DeleteTagParams) error
+	GetBookByID(ctx context.Context, arg GetBookByIDParams) (Book, error)
+	GetCollectionByID(ctx context.Context, arg GetCollectionByIDParams) (Collection, error)
 	GetDeviceByID(ctx context.Context, arg GetDeviceByIDParams) (Device, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	ListBooksByUserID(ctx context.Context, userID pgtype.UUID) ([]Book, error)
+	ListBooksInCollection(ctx context.Context, arg ListBooksInCollectionParams) ([]Book, error)
+	ListCollectionsByUserID(ctx context.Context, userID pgtype.UUID) ([]Collection, error)
 	ListDevicesByUserID(ctx context.Context, userID pgtype.UUID) ([]Device, error)
+	ListTagsByUserID(ctx context.Context, userID pgtype.UUID) ([]Tag, error)
+	ListTagsForBook(ctx context.Context, arg ListTagsForBookParams) ([]Tag, error)
+	RemoveBookFromCollection(ctx context.Context, arg RemoveBookFromCollectionParams) error
+	RemoveTagFromBook(ctx context.Context, arg RemoveTagFromBookParams) error
 	RevokeAllDeviceTokens(ctx context.Context, arg RevokeAllDeviceTokensParams) error
 	RevokeDevice(ctx context.Context, arg RevokeDeviceParams) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	SoftDeleteBook(ctx context.Context, arg SoftDeleteBookParams) error
+	SoftDeleteCollection(ctx context.Context, arg SoftDeleteCollectionParams) error
+	UpdateBook(ctx context.Context, arg UpdateBookParams) (Book, error)
+	UpdateBookStatus(ctx context.Context, arg UpdateBookStatusParams) (Book, error)
+	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
 	UpdateDevice(ctx context.Context, arg UpdateDeviceParams) (Device, error)
 	UpdateDeviceSyncTime(ctx context.Context, arg UpdateDeviceSyncTimeParams) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error

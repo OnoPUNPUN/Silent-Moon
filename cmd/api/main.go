@@ -11,7 +11,10 @@ import (
 	"github.com/silentmoon/api/internal/config"
 	"github.com/silentmoon/api/internal/handler"
 	authhandler "github.com/silentmoon/api/internal/handler/auth"
+	bookhandler "github.com/silentmoon/api/internal/handler/book"
+	collectionhandler "github.com/silentmoon/api/internal/handler/collection"
 	devicehandler "github.com/silentmoon/api/internal/handler/device"
+	taghandler "github.com/silentmoon/api/internal/handler/tag"
 	"github.com/silentmoon/api/internal/middleware"
 	"github.com/silentmoon/api/internal/platform/database"
 	"github.com/silentmoon/api/internal/platform/logger"
@@ -20,7 +23,10 @@ import (
 	postgresrepo "github.com/silentmoon/api/internal/repository/postgres"
 	sqlcdb "github.com/silentmoon/api/internal/repository/postgres/db"
 	authservice "github.com/silentmoon/api/internal/service/auth"
+	bookservice "github.com/silentmoon/api/internal/service/book"
+	collectionservice "github.com/silentmoon/api/internal/service/collection"
 	deviceservice "github.com/silentmoon/api/internal/service/device"
+	tagservice "github.com/silentmoon/api/internal/service/tag"
 	"github.com/silentmoon/api/migrations"
 )
 
@@ -86,15 +92,28 @@ func main() {
 
 		if dbConn != nil {
 			queries := sqlcdb.New(dbConn.Pool)
+
+			// Repositories
 			userRepo := postgresrepo.NewUserRepository(queries)
 			deviceRepo := postgresrepo.NewDeviceRepository(queries)
 			tokenRepo := postgresrepo.NewRefreshTokenRepository(queries)
+			bookRepo := postgresrepo.NewBookRepository(queries)
+			collRepo := postgresrepo.NewCollectionRepository(queries)
+			tagRepo := postgresrepo.NewTagRepository(queries)
 
+			// Services
 			authSvc := authservice.NewService(userRepo, deviceRepo, tokenRepo, tokenManager)
 			deviceSvc := deviceservice.NewService(deviceRepo, tokenRepo)
+			bookSvc := bookservice.NewService(bookRepo)
+			collSvc := collectionservice.NewService(collRepo, bookRepo)
+			tagSvc := tagservice.NewService(tagRepo, bookRepo)
 
+			// Handlers
 			authHdl := authhandler.NewHandler(authSvc)
 			deviceHdl := devicehandler.NewHandler(deviceSvc)
+			bookHdl := bookhandler.NewHandler(bookSvc)
+			collHdl := collectionhandler.NewHandler(collSvc)
+			tagHdl := taghandler.NewHandler(tagSvc)
 
 			// Public authentication routes
 			api.Route("/auth", func(auth chi.Router) {
@@ -110,13 +129,52 @@ func main() {
 				})
 			})
 
-			// Protected device routes
-			api.Route("/devices", func(dev chi.Router) {
-				dev.Use(middleware.Authenticate(tokenManager))
-				dev.Get("/", deviceHdl.List)
-				dev.Post("/", deviceHdl.Register)
-				dev.Patch("/{id}", deviceHdl.Update)
-				dev.Delete("/{id}", deviceHdl.Revoke)
+			// Protected routes
+			api.Group(func(protected chi.Router) {
+				protected.Use(middleware.Authenticate(tokenManager))
+
+				// Devices
+				protected.Route("/devices", func(dev chi.Router) {
+					dev.Get("/", deviceHdl.List)
+					dev.Post("/", deviceHdl.Register)
+					dev.Patch("/{id}", deviceHdl.Update)
+					dev.Delete("/{id}", deviceHdl.Revoke)
+				})
+
+				// Books
+				protected.Route("/books", func(bk chi.Router) {
+					bk.Get("/", bookHdl.List)
+					bk.Post("/", bookHdl.Create)
+					bk.Get("/{id}", bookHdl.Get)
+					bk.Patch("/{id}", bookHdl.Update)
+					bk.Delete("/{id}", bookHdl.Delete)
+
+					// Book Tags
+					bk.Get("/{id}/tags", tagHdl.ListTagsForBook)
+					bk.Post("/{id}/tags/{tagId}", tagHdl.AddTagToBook)
+					bk.Delete("/{id}/tags/{tagId}", tagHdl.RemoveTagFromBook)
+				})
+
+				// Collections
+				protected.Route("/collections", func(col chi.Router) {
+					col.Get("/", collHdl.List)
+					col.Post("/", collHdl.Create)
+					col.Get("/{id}", collHdl.Get)
+					col.Patch("/{id}", collHdl.Update)
+					col.Delete("/{id}", collHdl.Delete)
+
+					// Collection Books
+					col.Get("/{id}/books", collHdl.ListBooks)
+					col.Post("/{id}/books/{bookId}", collHdl.AddBook)
+					col.Delete("/{id}/books/{bookId}", collHdl.RemoveBook)
+				})
+
+				// Tags
+				protected.Route("/tags", func(tg chi.Router) {
+					tg.Get("/", tagHdl.List)
+					tg.Post("/", tagHdl.Create)
+					tg.Delete("/{id}", tagHdl.Delete)
+				})
 			})
 		}
 	})
