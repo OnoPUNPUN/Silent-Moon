@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -23,6 +25,8 @@ type Config struct {
 }
 
 func Load() *Config {
+	_ = godotenv.Load()
+
 	return &Config{
 		AppEnv:          getEnv("APP_ENV", "development"),
 		HTTPPort:        getEnv("HTTP_PORT", "8080"),

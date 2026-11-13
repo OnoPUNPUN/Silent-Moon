@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -18,7 +19,9 @@ func RunMigrations(fs embed.FS, migrationsDir, databaseURL string) error {
 		return fmt.Errorf("failed to create migration iofs driver: %w", err)
 	}
 
-	m, err := migrate.NewWithSourceInstance("iofs", d, databaseURL)
+	migrateURL := normalizeMigrationURL(databaseURL)
+
+	m, err := migrate.NewWithSourceInstance("iofs", d, migrateURL)
 	if err != nil {
 		return fmt.Errorf("failed to initialize migration instance: %w", err)
 	}
@@ -34,4 +37,16 @@ func RunMigrations(fs embed.FS, migrationsDir, databaseURL string) error {
 
 	slog.Info("database migrations applied successfully")
 	return nil
+}
+
+// normalizeMigrationURL ensures URLs with postgres:// or postgresql:// schemes
+// use pgx5:// so that golang-migrate dispatches to the registered pgx/v5 driver.
+func normalizeMigrationURL(databaseURL string) string {
+	if strings.HasPrefix(databaseURL, "postgresql://") {
+		return "pgx5://" + strings.TrimPrefix(databaseURL, "postgresql://")
+	}
+	if strings.HasPrefix(databaseURL, "postgres://") {
+		return "pgx5://" + strings.TrimPrefix(databaseURL, "postgres://")
+	}
+	return databaseURL
 }
