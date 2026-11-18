@@ -2,6 +2,10 @@
 
 > A lightweight, secure, and synchronization-focused REST API powering a cross-platform, local-first digital reading ecosystem.
 
+- **Developer API Documentation:** [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+- **Postman Collection (v2.1.0):** [postman_collection.json](postman_collection.json)
+- **OpenAPI 3.0 Spec:** [api/openapi.yaml](api/openapi.yaml)
+
 ---
 
 ## 1. Architecture & Tech Stack
